@@ -1,0 +1,17 @@
+  ```yaml
+  # This example has a source fingerprint that is generated for all python files
+  # under the src/ directory, but the fingerprint is dependent on the
+  # dependency locks. This means that even if all python files remain
+  # untouched, an update to the dependencies will generate a new
+  # source fingerprint.
+  # `fingerprints.yaml` is also included here to ensure that changes
+  # to the actual fingerprint configuration regenerates all fingerprints.
+  targets:
+    dependencies:
+      include-paths:
+        - poetry.lock
+        - fingerprints.yaml
+    source:
+      depends-on: [dependencies]
+      include-paths: ['fingerprinter/**.py']
+    ```
