@@ -27,9 +27,9 @@ that defines your fingerprint targets.
 targets:
   target-name: 
     include-paths:
-      - src/**.py   # Glob to match all python files recursively under a directory
-      - src/        # Will match every file under src/, recursively. (Same as 'src/**')
-      - src         # interchangeable with `src/` or `src/**`
+      - src/**/*.py   # Glob to match all python files recursively under a directory
+      - src/        # Will match every file under src/, recursively. (Same as 'src/**/*.*)
+      - src         # interchangeable with `src/` or `src/**/*.*`
       - src/foo.py  # Include a specific file
 ```
 
@@ -50,7 +50,7 @@ targets:
       - fingerprints.yaml 
   source:
     depends-on: [dependencies]
-    include-paths: ['src/**.py']
+    include-paths: ['src/**/*.py']
 ```
 
 **All paths will be lexicographically sorted at runtime**, however dependencies
@@ -60,22 +60,20 @@ are always resolved in the order provided.
 
 ### Excluding Files
 
-There may be some paths that you never want to consider. For instance `__pycache__` is
-always excluded by default, no matter where it falls. 
+There may be some paths that you never want to consider. 
+`.pyc`, `__pycache__` and `.pytest_cache/` are always ignored by default.
 
 You can exclude paths at the base of your yaml:
 
 ```yaml
 ignore-paths:
-  - __pycache__   # Never necessary, this path is always ignored
-  - .secrets      # Entire directory will always be ignored wherever it is in the tree
-  - secret.py     # Will be ignored in every directory it exists in.
+  - '**/ignore-me.py'  # Ignore every 'ignore-me.py' in the tree
+  - 'src/special/ignore-me-also.py'  # Ignores this specific file 
 
 targets:
   foo:
     # Will include src/foo/bar, but not src/.secrets/sekret or src/foo/__pycache__/blah
     include-paths: ['src']
 ```
-
 
 [common-build-scripts]: https://github.com/uwit-iam/common-build-scripts

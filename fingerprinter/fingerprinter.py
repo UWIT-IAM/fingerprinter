@@ -12,11 +12,16 @@ from typing import List
 
 from .models import FingerprintConfig
 
+
 class Fingerprinter:
     def __init__(self, config: FingerprintConfig):
         self.config = config
         self.path_cache = {}
-        self.ignored_paths = {'__pycache__'}
+        self.ignored_paths = {
+            '**/*.pyc',
+            '**/__pycache__/**',
+            '**/.pytest_cache/**'
+        }
         self.ignored_paths.update(self.config.ignore_paths)
         self.included_paths = set()
 
@@ -25,8 +30,10 @@ class Fingerprinter:
             if os.path.isfile(path):
                 self.path_cache[path] = [path]
             elif os.path.isdir(path):
-                path = os.path.join(path, '*')
-            self.path_cache[path] = sorted(glob.glob(path))
+                glob_ = os.path.join(path, '**', '*.*')
+                logging.debug(f"Auto-expanding path {path} to glob: {glob_}")
+                path = glob_
+            self.path_cache[path] = sorted(glob.glob(path, recursive=True))
         return self.path_cache.get(path, [])
 
     @staticmethod
@@ -56,18 +63,21 @@ class Fingerprinter:
         if filename in self.included_paths:
             return False
 
+        paths_to_ignore = set()
+
         if filename not in self.ignored_paths:
             for p in self.ignored_paths:
-
                 if (
                         # /foo/bar/baz.py will be ignore if 'foo/*' is ignored
-                        ('*' in p and filename in glob.glob(p))
+                        ('*' in p and filename in glob.glob(p, recursive=True))
                         # /foo/bar/baz.py will be ignored if 'baz.py' is ignored
                         or os.path.basename(filename) == p
                         # /foo/bar/baz.py will be ignored if '/foo/bar' is ignored
                         or os.path.dirname(filename) == p
                 ):
-                    self.ignored_paths.add(filename)
+                    paths_to_ignore.add(filename)
+
+        self.ignored_paths.update(paths_to_ignore)
 
         if filename in self.ignored_paths:
             return True
@@ -77,12 +87,19 @@ class Fingerprinter:
 
     def get_path_fingerprint(self, path: str) -> bytes:
         h = hashlib.sha256()
-        for fn in sorted(self.resolve_path(path)):
-            if os.path.isdir(fn):
-                h.update(self.get_path_fingerprint(fn))
-            elif os.path.isfile(fn):
-                logging.debug(f"Getting fingerprint for file: {fn}")
-                h.update(self.get_file_sha256sum(fn))
+        resolved_paths = sorted(self.resolve_path(path))
+        if resolved_paths:
+            for fn in resolved_paths:
+                if self.path_is_ignored(fn):
+                    logging.debug(f'Ignoring path "{fn}"')
+                    continue
+                if os.path.isdir(fn):
+                    h.update(self.get_path_fingerprint(fn))
+                elif os.path.isfile(fn):
+                    logging.debug(f"Getting fingerprint for file: {fn}")
+                    h.update(self.get_file_sha256sum(fn))
+        else:
+            logging.warning(f'No files matched path "{path}"')
         return h.hexdigest().encode('UTF-8')
 
     def get_fingerprint_bytes(self, target: str) -> bytes:
@@ -97,6 +114,7 @@ class Fingerprinter:
             h.update(self.get_fingerprint_bytes(dep))
 
         for path in sorted(target.include_paths):
+            logging.debug(f'Resolving files for path "{path}"')
             h.update(self.get_path_fingerprint(path))
 
         return h.hexdigest()

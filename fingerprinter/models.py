@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field
 
 
 class FingerprintTarget(BaseModel):
+    class Config:
+        allow_population_by_field_name = True
+
     depends_on: List[str] = Field(default_factory=lambda: [], alias='depends-on')
 
     # All directory paths are recursive.
@@ -12,5 +15,7 @@ class FingerprintTarget(BaseModel):
 
 
 class FingerprintConfig(BaseModel):
-    ignore_paths: List[str] = Field(default_factory=lambda: ['__pycache__'], alias='ignore-paths')
+    class Config:
+        allow_population_by_field_name = True
+    ignore_paths: List[str] = Field(default_factory=lambda: [], alias='ignore-paths')
     targets: Dict[str, FingerprintTarget]
