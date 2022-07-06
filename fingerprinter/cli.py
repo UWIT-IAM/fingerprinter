@@ -19,6 +19,8 @@ def get_parser() -> argparse.ArgumentParser:
                         help='Set log level to INFO')
     parser.add_argument('--debug', '-g', action='store_true', default=False,
                         help='Set log level to DEBUG')
+    parser.add_argument('--salt', action='store', default='',
+                        help='Use this to help differentiate one build from another based on dynamic context. Any value is accepted.')
     return parser
 
 
@@ -41,7 +43,7 @@ def main():
     logging.debug("Starting in DEBUG mode")
 
     fp = Fingerprinter(config)
-    print(fp.get_fingerprint(args.target))
+    print(fp.get_fingerprint(args.target, args.salt))
 
 
 if __name__ == "__main__":
