@@ -104,8 +104,11 @@ class Fingerprinter:
 
     def get_fingerprint_bytes(self, target: str) -> bytes:
         return self.get_fingerprint(target).encode('UTF-8')
+    
+    def get_string_fingerprint(self, val: str) -> bytes:
+        return hashlib.sha256(val.encode('UTF-8')).hexdigest().encode('UTF-8')
 
-    def get_fingerprint(self, target: str) -> str:
+    def get_fingerprint(self, target: str, salt: Optional[str] = None) -> str:
         logging.debug(f"Getting fingerprint for {target}")
         target = self.config.targets[target]  # Raises KeyError
         h = hashlib.sha256()
@@ -116,5 +119,9 @@ class Fingerprinter:
         for path in sorted(target.include_paths):
             logging.debug(f'Resolving files for path "{path}"')
             h.update(self.get_path_fingerprint(path))
+            
+        if salt:
+            logging.debug(f'Adding salt: {salt}')
+            h.update(self.get_string_fingerprint(salt))
 
         return h.hexdigest()
