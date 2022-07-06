@@ -8,7 +8,7 @@ __all__ = [
 import logging
 
 import os
-from typing import List
+from typing import List, Optional
 
 from .models import FingerprintConfig
 
