@@ -1,8 +1,14 @@
 [tool.poetry]
-name = "fingerprinter"
-version = "0.1.3"
+name = "uw-it-build-fingerprinter"
+version = "0.1.4"
 description = ""
 authors = ["Tom Thorogood <tom@tomthorogood.com>"]
+packages = [
+    { include = "fingerprinter" }
+]
+
+[tool.poetry.scripts]
+fingerprinter = 'fingerprinter.cli:main'
 
 [tool.poetry.dependencies]
 python = ">=3.8"
