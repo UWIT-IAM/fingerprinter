@@ -51,7 +51,6 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--build-arg',
         action='append',
-        default=[],
         help="Can be provided multiple times. Any build arg provided this way will be "
              "treated as salt, but only build-args declared in the build configuration file "
              "will be passed into docker. This is to prevent awkward vulnerabilities."
@@ -78,9 +77,10 @@ def main():
     log_level = logging.WARNING
     # turns '--build-arg foo=blah --build-arg blip=blorp' into
     # {"foo": "blah", "blip": "blorp"}
+    build_args = args.build_arg if args.build_arg else []
     build_args = {
         k: v for k, v in [
-            a.split('=') for a in args.build_arg
+            a.split('=') for a in build_args
         ]
     }
 

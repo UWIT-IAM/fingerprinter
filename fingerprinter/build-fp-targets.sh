@@ -62,7 +62,7 @@ function parse_args {
       --build-arg)
         shift
         arg_name="${1}"
-        fingerprint_args+="--build-arg ${arg_name}"  # whitespace intentional
+        fingerprint_args+="--build-arg ${arg_name} "  # whitespace intentional
         ;;
       *)
         echo "Invalid Option: $1"
@@ -111,7 +111,7 @@ function build_target {
   else
     echo "${log_prefix} Image not found. Building!"
   fi
-  exec $docker_cmd
+  exec $docker_cmd || return 1
   tag_and_push_image "${image_tag}"
 }
 
