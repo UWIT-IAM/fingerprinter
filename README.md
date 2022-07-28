@@ -1,79 +1,182 @@
 # Fingerprinter
 
-This utility library can be used to create SHA256 fingerprints
-using globs and paths. It is meant to be a replacement
-for the `sources/fingerprints.sh` in 
+This build utility can be used to:
+
+- create fingerprints for any collection of assets in your repository
+- associate fingerprint targets with docker build layers, so that you
+  can build your appplication artifacts,
+  only updating what is necessary based on changes to your repository,
+  while still taking advantage of docker's native caching capabilities.
+
+Requirements:
+
+- python 3.8+
+- To use the `build-script` utility, you must have `jq` installed. 
+
 [common-build-scripts].
 
 ## Installation
 
-- using **pip**: `pip install git+https://github.com/UWIT-IAM/fingerprinter@0.1`
-- using **poetry**: `fingerprinter = { git = "https://github.com/UWIT-IAM/fingerprinter.git", tag="v0.1" }`
-
+```
+pip install uw-it-build-fingerprinter
+```
 
 ## Use
 
+You can invoke the fingerprinter yourself:
+
 ```
-python -m fingerprinter.cli --help
+# linux/unix shell
+fingerprinter -f build-config.yaml -t target -o json
+```
+
+You can also use the fingerprinter to run your builds:
+
+```
+$(fingerprinter -o build-script) --build-arg foo=bar
 ```
 
 
 ### Configuration File
 
-To get started, you'll need a configuration file. This file is a yaml file
-that defines your fingerprint targets. 
+In most situations, you can just create your config file, and then
+invoke the provided build script. 
+
+Below is a fully annotated configuration file.
+
+For a more practical example, refer to [fingerprints.yaml](fingerprints.yaml).
 
 ```yaml
-targets:
-  target-name: 
-    include-paths:
-      - src/**/*.py   # Glob to match all python files recursively under a directory
-      - src/        # Will match every file under src/, recursively. (Same as 'src/**/*.*)
-      - src         # interchangeable with `src/` or `src/**/*.*`
-      - src/foo.py  # Include a specific file
-```
+# ALL FIELDS ARE OPTIONAL
 
-You may also declare other targets as dependencies:
+# This example shows all possible fields and examples of how to use them.
+# You do not need redefine or use every field.
 
-```yaml
-# This example has a source fingerprint that is generated for all python files
-# under the src/ directory, but the fingerprint is dependent on the 
-# dependency locks. This means that even if all python files remain
-# untouched, an update to the dependencies will generate a new
-# source fingerprint. 
-# `fingerprints.yaml` is also included here to ensure that changes
-# to the actual fingerprint configuration regenerates all fingerprints.
+# If there are paths you always want to ignore, no matter the target,
+# you may include them here. .pyc, __pycache__, and .pytest_cache files are
+# always ignored no matter what is listed here.
+ignore-paths:  # Default: empty
+  - '**/ignore-me.py'  # Ignore every 'ignore-me.py' in the tree
+  - 'src/special/ignore-me-also.py'  # Ignores this specific file 
+
+
+# If you are taking advantage of the build capabilities, you need
+# to define some information about your project's docker context
+# You can omit the docker section entirely if you 
+# are only interested in fingerprinting
+docker:
+    # The path to the dockerfile your builds will use, relative to your working
+    # directory. This can be overridden on a target-by-target basis.
+    dockerfile: Dockerfile  # default is 'Dockerfile'
+    
+    # Define your docker repository; this is used to push, pull, and build images
+    repository: ghcr.io/uwit-iam  # (default: empty)
+    
+    # This is used to push, pull, and build images.
+    app-name: fingerprinter  # (default: empty)
+    
+    build-args:
+      # In the list of args, each entry requires an 'arg' field, which defines
+      # the name of the arg as it appears in your dockerfile.
+      # In this example, you would expect to find the line:
+      #   `ARG BUILD_ID` somewhere in the associated dockerfile.
+      - arg: BUILD_ID
+        # You can pass build-arg values into the fingerprinter cli
+        # using `--build-arg name=value`. You can also set them
+        # as environment variables.
+        #
+        # The 'sources' configuration allows you to tweak where
+        # values are accepted from, and in what order. The higher
+        # a source is on this list, the higher its precedence. 
+        # 
+        sources:  # default: ['cli', 'env']
+          # You can wire in the fields from any other target by
+          # using the format: "target:<target-name>:<field-name>
+          # Available fields are:
+          #  - fingerprint
+          #  - dockerTag
+          #  - dockerCommand
+          #  - dockerTarget
+          #  - dockerfile
+          # Be aware that this sets up a passive dependency on that target.
+     
+          # In this example, we are setting the BUILD_ID to be the fingerprint of 
+          # the build-config target, and since this is in the global docker
+          # config, it will be shared for all layers!
+          - target:build-config:fingerprint
+          
+          # The 'cli' source will search for the arg from the passed command line
+          # args. (e.g., `fingerprinter -t app --build-arg BUILD_ID=foo`)
+          - cli  
+          
+          # The 'env' source will search environment variables for the 
+          # value. In our example, we would expect the 'BUILD_ID' environment 
+          # variable to be set.
+          - env  
+  
+
+# A "target" represents a collection of files whose contents are
+# hashed together to create a unique fingerprint. Targets can depend on other targets.
+# 
+# If any of a target's files or dependencies changes, the fingerprint for that target
+# will also change. 
 targets:
-  dependencies:
+  # Name your target here. If you are using docker layers, it is easiest to 
+  # name your docker layers and targets the same, however it is possible to 
+  # associate them if you want to name them differently.
+  # This target is named "build-config"; you can name it whatever you like.
+  build-config:
+    # Some targets are only used for fingerprinting and not builds; if you don't wish
+    # to try and build a docker layer associated with a target, you can set this to
+    # false.
+    build-target: false  # default: true
+   
+    # Each line of include-paths is a glob representing a directory, filename,
+    # or collection of files that should be included when calculating a 
+    # target's fingerprint. A later example in this file will show other
+    # ways to use include-paths.
     include-paths:
+      - Dockerfile
       - poetry.lock
-      - fingerprints.yaml 
-  source:
-    depends-on: [dependencies]
-    include-paths: ['src/**/*.py']
+      - fingerprints.yaml
+  
+  app:  # This is a target named "app"; you can name it whatever you like.
+    # You can declare dependencies on other targets,
+    # to ensure that a target will be rebuilt if one of 
+    # its dependencies changes.
+    depends-on: [build-config]  # default: empty
+    
+    docker:
+      # You can use a different dockerfile for a target, if the target
+      # is not configured in the root dockerfile
+      dockerfile: alternate.dockerfile  # (default: empty)
+      
+      # If your target and your docker layer have different names,
+      # you can associate the correct docker target here.
+      # In this example, you would expect to find something like:
+      #    FROM ubuntu:latest AS runtime
+      target: runtime  # (default: empty)
+
+      # Build args here work the same as they do in the global docker config.
+      # These can be defined in addition to the globally configured args.
+      # In this example, we are requiring that it be passed in via the CLI.
+      build-args:
+        - arg: APP_VERSION
+          sources: [cli]
 ```
 
 **All paths will be lexicographically sorted at runtime**, however dependencies
 are always resolved in the order provided.
 
-`python -m fingerprinter.cli -f fingerprints.yaml -t source` will do the rest!
 
-### Excluding Files
+## Publishing a new release
 
-There may be some paths that you never want to consider. 
-`.pyc`, `__pycache__` and `.pytest_cache/` are always ignored by default.
+To publish a new release of this tool, use `poetry`
+to update the version (e.g., `poetry version minor`).
 
-You can exclude paths at the base of your yaml:
+Make sure to `git add` and `git commit` to commit the version to the repository. 
 
-```yaml
-ignore-paths:
-  - '**/ignore-me.py'  # Ignore every 'ignore-me.py' in the tree
-  - 'src/special/ignore-me-also.py'  # Ignores this specific file 
+Then, run `poetry build && poetry publish`
 
-targets:
-  foo:
-    # Will include src/foo/bar, but not src/.secrets/sekret or src/foo/__pycache__/blah
-    include-paths: ['src']
-```
-
-[common-build-scripts]: https://github.com/uwit-iam/common-build-scripts
+You will need credentials which authenticated IAM maintainers can obtain from 
+the mosler vault at: kv/data/team-shared/pypi.org

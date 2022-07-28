@@ -1,2 +1,2 @@
 from .fingerprinter import Fingerprinter
-from .models import FingerprintConfig, FingerprintTarget
+from .models import BuildConfig, FingerprintTarget

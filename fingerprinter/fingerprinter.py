@@ -11,11 +11,11 @@ import logging
 import os
 from typing import List, Optional
 
-from .models import FingerprintConfig
+from .models import BuildConfig
 
 
 class Fingerprinter:
-    def __init__(self, config: FingerprintConfig):
+    def __init__(self, config: BuildConfig):
         self.config = config
         self.path_cache = {}
         self.ignored_paths = {
