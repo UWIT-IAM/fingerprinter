@@ -3,12 +3,26 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '*.md'
-      - 'LICENSE'
-
+    paths:
+      - pyproject.toml
 jobs:
+  check-publishability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      # Only publish if the version has changed; otherwise, we would be
+      # re-publishing existing stuff without updating the version, and that
+      # could cause problems.
+      - run: |
+          publishable=false
+          if git show | grep 'version ='
+          then
+            publishable=true
+          fi
+          echo "::set-output name=publish::${publishable}"
   build-and-publish:
+    needs: [check-publishability]
+    if: needs.check-publishability.outputs.publishable == 'true'
     runs-on: ubuntu-latest
     permissions:
       packages: write
