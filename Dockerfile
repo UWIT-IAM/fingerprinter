@@ -7,4 +7,4 @@ RUN apt-get update && apt-get -y install jq && \
 FROM dependencies AS cli
 COPY ./fingerprinter ./fingerprinter
 RUN poetry install --no-interaction --no-dev
-CMD ["fingerprinter"]
+ENTRYPOINT ["fingerprinter"]

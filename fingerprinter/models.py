@@ -11,7 +11,7 @@ class BuildArgConfig(BaseModel):
     sources: List[str] = ['cli', 'env']
 
 
-class GlobalDockerConfig(BaseModel):
+class DockerConfig(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
@@ -48,7 +48,8 @@ class BuildConfig(BaseModel):
         allow_population_by_field_name = True
     ignore_paths: List[str] = Field(default_factory=list, alias='ignore-paths')
     targets: Dict[str, FingerprintTarget]
-    docker: GlobalDockerConfig = GlobalDockerConfig()
+    docker: DockerConfig = DockerConfig()
+    release_target: Optional[str] = Field(None, alias='release-target')
 
 
 class TargetOutput(BaseModel):

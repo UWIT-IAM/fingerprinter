@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This shell script can be used to invoke the fingerprinter to
 # smartly build and cache docker layers based on your fingerprint configuration.
 #
@@ -12,13 +13,17 @@
 # so that it would be more portable across platforms. The python docker library
 # could be used to actually execute builds.
 #
-#!/usr/bin/env bash
 
 function print_help {
    cat <<EOF
    Use: build-layers.sh [--debug --help]
    Options:
-   -t, --add-tag   Can be supplied multiple times.
+   -t, --add-tag   Can be supplied multiple times. Tags each layer with this
+                   additional tag.
+
+   --release <V>   Creates a "release" image with your app name and the given release
+                   version. Note that releases are not necessarily deployments. You
+                   must have a release-target defined in your configuration.
 
    -f, --force     Execute docker builds even if no changes are detected
 
@@ -32,6 +37,7 @@ EOF
 fingerprint_args=""
 target_config=""
 fingerprint_config_file='fingerprints.yaml'
+release_tag=""
 
 
 function parse_args {
@@ -44,6 +50,10 @@ function parse_args {
         ;;
       -g|--debug)
         DEBUG=1
+        ;;
+      --release)
+        shift
+        release_tag="${1}"
         ;;
       -c|--config)
         shift
@@ -107,11 +117,12 @@ function build_target {
     else
       echo "${log_prefix} Nothing to do"
       tag_and_push_image ${image_tag}
+      return
     fi
   else
     echo "${log_prefix} Image not found. Building!"
   fi
-  $docker_cmd
+  $docker_cmd || return 1
   tag_and_push_image "${image_tag}"
 }
 
@@ -147,14 +158,23 @@ function build_targets {
   done
 }
 
-parse_args "$@" || exit 1
+function tag_release {
+  local release_target=$(fingerprinter_run -o release-target)
+  local release_target=$(fingerprinter_run -t ${release_target} -o json)
+  local source_image=$(echo "$release_target" | jq -r .dockerTag)
+  local image_name=$(echo "${source_image}" | cut -f1 -d:)
+  # We also want to slice off the `.layer-name` from the end, so that we
+  # are tagging the "root" image for the app.  We don't know how many
+  # dots might appear in the image name, but we can probably assume
+  # it will be fewer than 99; we reverse the name, slice at the (now)
+  # first dot, then reverse it again.
+  image_name=$(echo "${image_name}" | rev | cut -f2-99 -d. | rev)
+  local release_image="${image_name}:${release_tag}"
+  echo "Tagging release image: ${release_image}"
+  docker tag "${source_image}" "${release_image}"
+}
 
-if ! type poetry >/dev/null
-then
-  >&2 echo "Poetry is not installed. Cannot continue."
-  >&2 echo "Please visit https://python-poetry.org and follow installation instructions."
-  exit 1
-fi
+parse_args "$@" || exit 1
 
 if ! type jq >/dev/null
 then
@@ -174,3 +194,7 @@ then
 fi
 
 build_targets
+if [[ -n "${release_tag}" ]]
+then
+  tag_release
+fi

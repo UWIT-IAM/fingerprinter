@@ -1,0 +1,36 @@
+name: Release on push to `main`
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - 'LICENSE'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: abatilo/actions-poetry@v2.1.3
+      - run: poetry config virtualenvs.create false
+      - run: sudo apt-get -y install jq
+      - run: |
+          version=$(poetry version -s)
+          echo "::set-output name=version::${version}"
+          umbrella_version=$(echo "${version}" | cut -f1-2 -d.)
+          echo "::set-output name=umbrella-version::${umbrella_version}"
+        id: get-version
+      - run: poetry install
+      - run: |
+          $(fingerprinter -o build-script) --release ${version} --cache
+          $(fingerprinter -o build-script) --release ${umbrella-version} --cache
+        env:
+          version: ${{ steps.get-version.outputs.version }}
+          umbrella_version: ${{ steps.get-version.outputs.umbrella-version }}
+      - run: |
+          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+          poetry build -n
+          poetry publish -n

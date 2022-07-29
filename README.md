@@ -8,12 +8,16 @@ This build utility can be used to:
   only updating what is necessary based on changes to your repository,
   while still taking advantage of docker's native caching capabilities.
 
-Requirements:
+
+You can choose to use this utility natively by preparing your environment,
+but you can also invoke a docker image. Refer to [invoking the docker image](#invoking-the-docker-image).
+
+Requirements for direct use:
 
 - python 3.8+
 - To use the `build-script` utility, you must have `jq` installed. 
 
-[common-build-scripts].
+
 
 ## Installation
 
@@ -113,7 +117,18 @@ docker:
           # value. In our example, we would expect the 'BUILD_ID' environment 
           # variable to be set.
           - env  
-  
+ 
+
+# You can set one of your build targets as a release target. 
+# When you want to build a release image (i.e., an updated version number), 
+# the current configuration of this target will be used to tag
+# the new release image. 
+# The new release image will be tagged using the app name and the release name
+# only (no layer annotations).
+# In this example, ghcr.io/uwit-iam/fingerprinter.app:f1ng3rpr1nt
+# would be re-tagged as ghcr.io/uwit-iam/fingerprinter:1.2.3 (assuming 1.2.3 was the 
+# release name).
+release-target: app 
 
 # A "target" represents a collection of files whose contents are
 # hashed together to create a unique fingerprint. Targets can depend on other targets.
@@ -180,3 +195,38 @@ Then, run `poetry build && poetry publish`
 
 You will need credentials which authenticated IAM maintainers can obtain from 
 the mosler vault at: kv/data/team-shared/pypi.org
+
+## Invoking the docker image
+
+```
+ docker run \
+  # Mount your current directory onto the container so that the utility
+  # can read your configuration and file contents to generate fingerprints.
+  --mount "type=bind,source=$(pwd),target=/app" \
+  # Set the working directory to the mount
+  -w /app -it ghcr.io/uwit-iam/fingerprinter:0.2.3 
+  # After the image name, provide args to the fingerprinter utility
+  # just like you would if you are running it natively.
+  -t cli
+```
+
+One limitation of invoking this via docker is that you cannot
+invoke the build script, because without a sophisticated setup,
+you can't build docker images inside another docker image.
+
+## Incorporating into your github actions
+
+You can run your github actions on the docker image to have the fingerprinter
+utility available for your build processes without having to directly
+install it.
+
+```yaml
+jobs:
+  build-and-cache:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/uwit-iam/fingerprinter:0.2
+    steps:
+      - uses: actions/checkout@v3
+      - run: $(fingerprinter -o build-script) --cache
+```

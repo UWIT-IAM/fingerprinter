@@ -47,7 +47,8 @@ def get_parser() -> argparse.ArgumentParser:
                         help='Use this to help differentiate one build '
                              'from another based on dynamic context. Any value is accepted.')
     parser.add_argument('--output', '-o', default='json',
-                        help='fingerprint/fp, build-script, build-targets, json/js, pretty-json/pjs, query/q')
+                        help='fingerprint/fp, build-script, build-targets, '
+                             'json/js, pretty-json/pjs, query/q, release-target')
     parser.add_argument(
         '--build-arg',
         action='append',
@@ -74,6 +75,11 @@ def main():
         return
 
     config = load_yaml(args.config_file)
+
+    if args.output == 'release-target':
+        print(config.release_target)
+        return
+
     log_level = logging.WARNING
     # turns '--build-arg foo=blah --build-arg blip=blorp' into
     # {"foo": "blah", "blip": "blorp"}

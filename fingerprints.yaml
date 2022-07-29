@@ -1,3 +1,6 @@
+
+release-target: cli
+
 docker:
   repository: ghcr.io/uwit-iam
   app-name: fingerprinter
@@ -8,6 +11,8 @@ targets:
     include-paths:
       - poetry.lock
       - pyproject.toml
+      - Dockerfile
+      - fingerprints.yaml
 
   dependencies:
     depends-on: [build-config]
