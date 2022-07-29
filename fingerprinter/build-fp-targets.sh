@@ -111,7 +111,7 @@ function build_target {
   else
     echo "${log_prefix} Image not found. Building!"
   fi
-  exec $docker_cmd || return 1
+  $docker_cmd
   tag_and_push_image "${image_tag}"
 }
 
