@@ -71,7 +71,7 @@ def main():
     args = get_parser().parse_args()
 
     if args.output == 'build-script':
-        print(os.path.join(here, 'build-fp-targets.sh'))
+        print(os.path.join(here, 'build.sh'))
         return
 
     config = load_yaml(args.config_file)

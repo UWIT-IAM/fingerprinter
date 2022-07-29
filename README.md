@@ -213,20 +213,3 @@ the mosler vault at: kv/data/team-shared/pypi.org
 One limitation of invoking this via docker is that you cannot
 invoke the build script, because without a sophisticated setup,
 you can't build docker images inside another docker image.
-
-## Incorporating into your github actions
-
-You can run your github actions on the docker image to have the fingerprinter
-utility available for your build processes without having to directly
-install it.
-
-```yaml
-jobs:
-  build-and-cache:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/uwit-iam/fingerprinter:0.2
-    steps:
-      - uses: actions/checkout@v3
-      - run: $(fingerprinter -o build-script) --cache
-```

@@ -8,18 +8,27 @@ on:
 jobs:
   check-publishability:
     runs-on: ubuntu-latest
+    outputs:
+      publishable: ${{ steps.check.outputs.publish }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
       # Only publish if the version has changed; otherwise, we would be
       # re-publishing existing stuff without updating the version, and that
       # could cause problems.
       - run: |
+          set -x
           publishable=false
-          if git show | grep 'version ='
+          diff=$(git diff HEAD:pyproject.toml HEAD~1:pyproject.toml)
+          echo "$diff" | grep '+version ='
+          if [[ "$?" == "0" ]]
           then
             publishable=true
           fi
           echo "::set-output name=publish::${publishable}"
+        name: Check if the change should be published
+        id: check
   build-and-publish:
     needs: [check-publishability]
     if: needs.check-publishability.outputs.publishable == 'true'
@@ -31,8 +40,15 @@ jobs:
       - uses: abatilo/actions-poetry@v2.1.3
       - run: poetry config virtualenvs.create false
       - run: sudo apt-get -y install jq
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           version=$(poetry version -s)
+          echo "::notice::Publishing version ${version}"
           echo "::set-output name=version::${version}"
           umbrella_version=$(echo "${version}" | cut -f1-2 -d.)
           echo "::set-output name=umbrella-version::${umbrella_version}"

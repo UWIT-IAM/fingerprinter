@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "uw-it-build-fingerprinter"
-version = "0.2.3"
+version = "0.2.4"
 description = ""
 authors = ["Tom Thorogood <tom@tomthorogood.com>"]
 packages = [
