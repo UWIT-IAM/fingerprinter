@@ -106,7 +106,7 @@ function build_target {
       echo "${log_prefix} Rebuilding"
     else
       echo "${log_prefix} Nothing to do"
-      return
+      tag_and_push_image ${image_tag}
     fi
   else
     echo "${log_prefix} Image not found. Building!"
