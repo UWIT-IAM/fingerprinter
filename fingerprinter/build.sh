@@ -269,11 +269,18 @@ then
   fi
 fi
 
-build_targets
+# If a user is only deploying a pre-built release, we don't need to
+# re-build.
+if [[ -z "${deploy_stage}" ]] || [[ -n "${release_tag}" ]]
+then
+  build_targets
+fi
+
 if [[ -n "${release_tag}" ]]
 then
   tag_release || exit $?
 fi
+
 if [[ -n "${deploy_stage}" ]]
 then
   deploy || exit $?
