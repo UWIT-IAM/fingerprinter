@@ -145,7 +145,7 @@ function image_exists_locally {
 
 function build_target {
   local target_name=$1
-  local target_config=$(fingerprinter_run -t ${target_name} -o json $fingerprint_args)
+  local target_config=$(fingerprinter_run -t ${target_name} -o json) || return 1
   local docker_cmd=$(echo "$target_config" | jq -r .dockerCommand)
   local image_tag=$(echo "$target_config" | jq -r .dockerTag)
   local fingerprint=$(echo "$target_config" | jq -r .fingerprint)
@@ -186,7 +186,7 @@ function tag_and_push_image {
 }
 
 function fingerprinter_run {
-  $fp_prefix fingerprinter -f "${fingerprint_config_file}" $@
+  $fp_prefix fingerprinter -f "${fingerprint_config_file}" ${fingerprint_args} $@ || return $?
 }
 
 function build_targets {
@@ -204,8 +204,8 @@ function build_targets {
 }
 
 function get_release_target {
-  local release_target=$(fingerprinter_run -o release-target)
-  fingerprinter_run -t ${release_target} -o json
+  local release_target=$(fingerprinter_run -o release-target) || return $?
+  fingerprinter_run -t ${release_target} -o json || return $?
 }
 
 function get_app_image_name {
@@ -213,7 +213,7 @@ function get_app_image_name {
 }
 
 function tag_release {
-  local release_target="$(get_release_target)"
+  local release_target="$(get_release_target)" || return $?
   local source_image=$(echo "$release_target" | jq -r .dockerTag)
   local app_image=$(get_app_image_name "${source_image}")
   local release_image="${app_image}:${release_tag}"
@@ -257,16 +257,6 @@ then
   >&2 echo "jq is not installed. Cannot continue."
   >&2 echo "Find and install the right release for you: https://stedolan.github.io/jq/download/"
   exit 1
-fi
-
-if [[ -z "${SKIP_POETRY_INSTALL}" ]]
-then
-  output=$(poetry install --no-interaction)
-  if [[ "$?" != "0" ]]
-  then
-    >&2 echo $output
-    exit 1
-  fi
 fi
 
 # If a user is only deploying a pre-built release, we don't need to
