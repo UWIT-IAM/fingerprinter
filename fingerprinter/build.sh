@@ -120,6 +120,7 @@ function parse_args {
       --release)
         shift
         release_tag="${1}"
+        ADDITIONAL_TAGS+="${release_tag} "
         ;;
       -t|--add-tag)
         shift
