@@ -11,29 +11,30 @@ from .models import BuildConfig
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="""
-        This tool can be used to build deterministic fingerprints, that 
+        This tool can be used to build deterministic fingerprints, that
         are smartly flagged for updates based on configuration you provide.
         For full documentation, please refer to the README at
-            https://github.com/uwit-iam/fingerprinter/tree/main/README.md        
-       
-       
+            https://github.com/uwit-iam/fingerprinter/tree/main/README.md
+
+
         Behavior is mainly controlled by the output type (-o/--output):
-        
-        js/json        REQUIRES: -t/--target 
+
+        js/json        REQUIRES: -t/--target
                                  -c/--config (if not default)
                        OUTPUTS: the json build configuration for the target
                        This is the default output type
-                       
+
         pjs/pretty-json
                        Same as js/json, but the output is easier to read
-        
+
         build-script   OUTPUTS: The absolute path to the 'build-fp-targets.sh' script.
-        
+
         build-targets  REQUIRES: -c/c--config (if not default)
                        OUTPUTS: An acceptable order in which to build all configured targets
-         
+
         """,
         usage="fingerprinter [-o <OUTPUT_TYPE>] [-f <CONFIGURATION_FILE] [-t TARGET] [OPTIONS]",
+        formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument('--config-file', '-f', default='fingerprints.yaml',
                         help='The config file you want to use to generate fingerprints.')
