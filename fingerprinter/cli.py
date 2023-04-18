@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os.path
+import textwrap
 
 import yaml
 
@@ -10,7 +11,7 @@ from .models import BuildConfig
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="""
+        description=textwrap.dedent("""
         This tool can be used to build deterministic fingerprints, that
         are smartly flagged for updates based on configuration you provide.
         For full documentation, please refer to the README at
@@ -32,7 +33,7 @@ def get_parser() -> argparse.ArgumentParser:
         build-targets  REQUIRES: -c/c--config (if not default)
                        OUTPUTS: An acceptable order in which to build all configured targets
 
-        """,
+        """),
         usage="fingerprinter [-o <OUTPUT_TYPE>] [-f <CONFIGURATION_FILE] [-t TARGET] [OPTIONS]",
         formatter_class=argparse.RawTextHelpFormatter,
     )
