@@ -230,7 +230,7 @@ function deploy {
     echo "Could not determine version to deploy. Please provide the -dv/-dversion
           argument or create a new release with '--release'"
   fi
-  local deploy_ts="$(date +%Y.%m.%d.%H.%M.%S)"
+  local deploy_ts="$(date --utc +%Y.%m.%d.%H.%M.%S)"
   local deploy_id="${deploy_ts}.v${deploy_version}"
   local deploy_tag="deploy-${deploy_stage}.${deploy_id}"
   local release_target=$(get_release_target | jq -r .dockerTag)
